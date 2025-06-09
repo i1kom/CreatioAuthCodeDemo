@@ -20,7 +20,24 @@
         {% if error %}
             <p class="error">{{ error }}</p>
         {% endif %}
-        <a class="btn" href="{{ url_for('login') }}">Connect Creatio account</a>
+        {% if activities %}
+            {% if user %}
+                <p>Logged in as {{ user.get('name') or user.get('email') }}</p>
+            {% endif %}
+            <h3>Recent Activities</h3>
+            <ul>
+                {% for act in activities %}
+                    <li>{{ act.get('Title') }}</li>
+                {% else %}
+                    <li>No activities found.</li>
+                {% endfor %}
+            </ul>
+            <a class="btn" href="{{ url_for('refresh') }}">Refresh Token</a>
+            <a class="btn" href="{{ url_for('logout') }}">Logout</a>
+            <a class="btn" href="{{ url_for('revoke') }}">Revoke</a>
+        {% else %}
+            <a class="btn" href="{{ url_for('login') }}">Connect Creatio account</a>
+        {% endif %}
     </div>
 </body>
 </html>

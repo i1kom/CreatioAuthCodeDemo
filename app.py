@@ -45,11 +45,47 @@ def get_userinfo_endpoint():
         return data.get('userinfo_endpoint')
     return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
 
+
+def fetch_user_and_activities():
+    """Retrieve user info and recent activities using current access token."""
+    access_token = session.get('access_token')
+    if not access_token:
+        return None, []
+    headers = {'Authorization': f'Bearer {access_token}'}
+    user = None
+    activities = []
+    userinfo_endpoint = get_userinfo_endpoint()
+    if userinfo_endpoint:
+        try:
+            resp = requests.get(userinfo_endpoint, headers=headers)
+            if resp.status_code == 401:
+                return 'refresh', []
+            resp.raise_for_status()
+            user = resp.json()
+        except requests.RequestException:
+            user = None
+    try:
+        aresp = requests.get(
+            f"{config['CreatioBaseUrl']}/0/odata/ActivityCollection?$top=5",
+            headers=headers
+        )
+        if aresp.status_code == 401:
+            return 'refresh', []
+        aresp.raise_for_status()
+        activities = aresp.json().get('value', [])
+    except requests.RequestException:
+        activities = []
+    return user, activities
+
 @app.route('/')
 def index():
-    if 'access_token' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    if 'access_token' not in session:
+        return render_template('index.html')
+    result = fetch_user_and_activities()
+    if result == 'refresh':
+        return redirect(url_for('refresh'))
+    user, activities = result
+    return render_template('index.html', user=user, activities=activities)
 
 @app.route('/login')
 def login():
@@ -74,6 +110,9 @@ def callback():
     state = request.args.get('state')
     if not code or state != session.get('oauth_state'):
         return redirect(url_for('index'))
+      
+    session.pop('oauth_state', None)
+
     _, token_url, _ = get_auth_endpoints()
     data = {
         'client_id': config['ClientId'],
@@ -88,39 +127,20 @@ def callback():
     token_data = resp.json()
     session['access_token'] = token_data.get('access_token')
     session['refresh_token'] = token_data.get('refresh_token')
-    return redirect(url_for('dashboard'))
+
+    return redirect(url_for('index'))
 
 @app.route('/dashboard')
 def dashboard():
-    access_token = session.get('access_token')
-    if not access_token:
+    if 'access_token' not in session:
         return redirect(url_for('index'))
-    headers = {'Authorization': f'Bearer {access_token}'}
-    activities = []
-    user = {}
-    # Fetch user info
-    userinfo_endpoint = get_userinfo_endpoint()
-    if userinfo_endpoint:
-        try:
-            uresp = requests.get(userinfo_endpoint, headers=headers)
-            if uresp.status_code == 401:
-                return redirect(url_for('refresh'))
-            uresp.raise_for_status()
-            user = uresp.json()
-        except requests.RequestException:
-            user = {}
-    # Fetch activities
-    try:
-        aresp = requests.get(
-            f"{config['CreatioBaseUrl']}/0/odata/ActivityCollection?$top=5",
-            headers=headers
-        )
-        if aresp.status_code == 401:
-            return redirect(url_for('refresh'))
-        aresp.raise_for_status()
-        activities = aresp.json().get('value', [])
-    except requests.RequestException:
-        activities = []
+    result = fetch_user_and_activities()
+    if result == 'refresh':
+        return redirect(url_for('refresh'))
+    user, activities = result
+    if user is None:
+        user = {}
+
     return render_template('dashboard.html', user=user, activities=activities)
 
 @app.route('/refresh')
@@ -141,7 +161,8 @@ def refresh():
         token_data = resp.json()
         session['access_token'] = token_data.get('access_token')
         session['refresh_token'] = token_data.get('refresh_token', refresh_token)
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('index'))
+
     session.clear()
     return redirect(url_for('index'))
 
