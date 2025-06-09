@@ -3,7 +3,9 @@ import secrets
 from urllib.parse import urlencode
 
 import requests
-from flask import Flask, session, redirect, url_for, request, render_template
+
+from flask import Flask, session, redirect, url_for, request, render_template, jsonify
+
 
 # Load configuration from appsettings.json
 with open('appsettings.json') as f:
@@ -78,7 +80,8 @@ def fetch_user_and_activities():
             user = None
     try:
         aresp = requests.get(
-            f"{config['CreatioBaseUrl']}/0/odata/ActivityCollection?$top=5",
+            f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
+
             headers=headers
         )
         if aresp.status_code == 401:
@@ -91,15 +94,8 @@ def fetch_user_and_activities():
 
 @app.route('/')
 def index():
+    return render_template('index.html')
 
-    if not TOKENS.get('access_token'):
-
-        return render_template('index.html')
-    result = fetch_user_and_activities()
-    if result == 'refresh':
-        return redirect(url_for('refresh'))
-    user, activities = result
-    return render_template('index.html', user=user, activities=activities)
 
 @app.route('/login')
 def login():
@@ -160,9 +156,27 @@ def dashboard():
 
     return render_template('dashboard.html', user=user, activities=activities)
 
+
+@app.route('/api/activities')
+def api_activities():
+    """Return user info, activities and monthly counts as JSON."""
+    if not TOKENS.get('access_token'):
+        return jsonify({'authenticated': False}), 401
+    result = fetch_user_and_activities()
+    if result == 'refresh':
+        return jsonify({'authenticated': False}), 401
+    user, activities = result
+    counts = {}
+    for act in activities:
+        date_str = act.get('StartDate') or act.get('CreatedOn')
+        if not date_str:
+            continue
+        month = date_str[:7]
+        counts[month] = counts.get(month, 0) + 1
+    return jsonify({'authenticated': True, 'user': user, 'activities': activities, 'counts': counts})
+
 @app.route('/refresh')
 def refresh():
-
     refresh_token = TOKENS.get('refresh_token')
 
     if not refresh_token:
