@@ -45,6 +45,7 @@ def get_userinfo_endpoint():
         return data.get('userinfo_endpoint')
     return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
 
+
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
     access_token = session.get('access_token')
@@ -109,7 +110,9 @@ def callback():
     state = request.args.get('state')
     if not code or state != session.get('oauth_state'):
         return redirect(url_for('index'))
+      
     session.pop('oauth_state', None)
+
     _, token_url, _ = get_auth_endpoints()
     data = {
         'client_id': config['ClientId'],
@@ -124,6 +127,7 @@ def callback():
     token_data = resp.json()
     session['access_token'] = token_data.get('access_token')
     session['refresh_token'] = token_data.get('refresh_token')
+
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
@@ -136,6 +140,7 @@ def dashboard():
     user, activities = result
     if user is None:
         user = {}
+
     return render_template('dashboard.html', user=user, activities=activities)
 
 @app.route('/refresh')
@@ -157,6 +162,7 @@ def refresh():
         session['access_token'] = token_data.get('access_token')
         session['refresh_token'] = token_data.get('refresh_token', refresh_token)
         return redirect(url_for('index'))
+
     session.clear()
     return redirect(url_for('index'))
 
