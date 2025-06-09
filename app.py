@@ -12,6 +12,17 @@ with open('appsettings.json') as f:
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
 
+# Global storage for access and refresh tokens
+TOKENS = {
+    'access_token': None,
+    'refresh_token': None
+}
+
+def clear_tokens():
+    """Remove stored tokens."""
+    TOKENS['access_token'] = None
+    TOKENS['refresh_token'] = None
+
 openid_config_cache = None
 
 def get_openid_configuration():
@@ -48,7 +59,8 @@ def get_userinfo_endpoint():
 
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
-    access_token = session.get('access_token')
+    access_token = TOKENS.get('access_token')
+
     if not access_token:
         return None, []
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -79,7 +91,9 @@ def fetch_user_and_activities():
 
 @app.route('/')
 def index():
-    if 'access_token' not in session:
+
+    if not TOKENS.get('access_token'):
+
         return render_template('index.html')
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -110,7 +124,7 @@ def callback():
     state = request.args.get('state')
     if not code or state != session.get('oauth_state'):
         return redirect(url_for('index'))
-      
+
     session.pop('oauth_state', None)
 
     _, token_url, _ = get_auth_endpoints()
@@ -125,14 +139,17 @@ def callback():
     resp = requests.post(token_url, data=data)
     resp.raise_for_status()
     token_data = resp.json()
-    session['access_token'] = token_data.get('access_token')
-    session['refresh_token'] = token_data.get('refresh_token')
+
+    TOKENS['access_token'] = token_data.get('access_token')
+    TOKENS['refresh_token'] = token_data.get('refresh_token')
 
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
 def dashboard():
-    if 'access_token' not in session:
+
+    if not TOKENS.get('access_token'):
+
         return redirect(url_for('index'))
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -145,7 +162,9 @@ def dashboard():
 
 @app.route('/refresh')
 def refresh():
-    refresh_token = session.get('refresh_token')
+
+    refresh_token = TOKENS.get('refresh_token')
+
     if not refresh_token:
         return redirect(url_for('index'))
     _, token_url, _ = get_auth_endpoints()
@@ -159,18 +178,21 @@ def refresh():
     resp = requests.post(token_url, data=data)
     if resp.status_code == 200:
         token_data = resp.json()
-        session['access_token'] = token_data.get('access_token')
-        session['refresh_token'] = token_data.get('refresh_token', refresh_token)
-        return redirect(url_for('index'))
 
-    session.clear()
+        TOKENS['access_token'] = token_data.get('access_token')
+        TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
+        return redirect(url_for('index'))
+    clear_tokens()
+
     return redirect(url_for('index'))
 
 @app.route('/revoke')
 def revoke():
-    refresh_token = session.get('refresh_token')
+
+    refresh_token = TOKENS.get('refresh_token')
     if not refresh_token:
-        session.clear()
+        clear_tokens()
+
         return redirect(url_for('index'))
     _, _, revocation_url = get_auth_endpoints()
     data = {
@@ -183,12 +205,16 @@ def revoke():
         requests.post(revocation_url, data=data)
     except requests.RequestException:
         pass
-    session.clear()
+
+    clear_tokens()
+
     return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
-    session.clear()
+
+    clear_tokens()
+
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
