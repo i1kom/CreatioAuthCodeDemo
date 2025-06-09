@@ -56,9 +56,11 @@ def get_userinfo_endpoint():
         return data.get('userinfo_endpoint')
     return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
 
+
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
     access_token = TOKENS.get('access_token')
+
     if not access_token:
         return None, []
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -89,7 +91,9 @@ def fetch_user_and_activities():
 
 @app.route('/')
 def index():
+
     if not TOKENS.get('access_token'):
+
         return render_template('index.html')
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -120,7 +124,9 @@ def callback():
     state = request.args.get('state')
     if not code or state != session.get('oauth_state'):
         return redirect(url_for('index'))
+
     session.pop('oauth_state', None)
+
     _, token_url, _ = get_auth_endpoints()
     data = {
         'client_id': config['ClientId'],
@@ -133,13 +139,17 @@ def callback():
     resp = requests.post(token_url, data=data)
     resp.raise_for_status()
     token_data = resp.json()
+
     TOKENS['access_token'] = token_data.get('access_token')
     TOKENS['refresh_token'] = token_data.get('refresh_token')
+
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
 def dashboard():
+
     if not TOKENS.get('access_token'):
+
         return redirect(url_for('index'))
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -147,11 +157,14 @@ def dashboard():
     user, activities = result
     if user is None:
         user = {}
+
     return render_template('dashboard.html', user=user, activities=activities)
 
 @app.route('/refresh')
 def refresh():
+
     refresh_token = TOKENS.get('refresh_token')
+
     if not refresh_token:
         return redirect(url_for('index'))
     _, token_url, _ = get_auth_endpoints()
@@ -165,17 +178,21 @@ def refresh():
     resp = requests.post(token_url, data=data)
     if resp.status_code == 200:
         token_data = resp.json()
+
         TOKENS['access_token'] = token_data.get('access_token')
         TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
         return redirect(url_for('index'))
     clear_tokens()
+
     return redirect(url_for('index'))
 
 @app.route('/revoke')
 def revoke():
+
     refresh_token = TOKENS.get('refresh_token')
     if not refresh_token:
         clear_tokens()
+
         return redirect(url_for('index'))
     _, _, revocation_url = get_auth_endpoints()
     data = {
@@ -188,12 +205,16 @@ def revoke():
         requests.post(revocation_url, data=data)
     except requests.RequestException:
         pass
+
     clear_tokens()
+
     return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
+
     clear_tokens()
+
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
