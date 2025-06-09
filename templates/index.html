@@ -1,2 +1,26 @@
-<!-- Homepage template -->
-<html><body><h2>Welcome to Alphabusiness</h2><a href='/login'>Connect Creatio account</a></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alphabusiness Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>ALPHABUSINESS</h2>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="#">Dashboard</a>
+            <a href="#">Reports</a>
+            <a href="#">Settings</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Corporate Portal</h1>
+        <p>Connect your Creatio account to access integrated features and data.</p>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        <a class="btn" href="{{ url_for('login') }}">Connect Creatio account</a>
+    </div>
+</body>
+</html>
