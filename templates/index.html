@@ -3,6 +3,8 @@
 <head>
     <title>Alphabusiness Portal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
 </head>
 <body>
     <div class="sidebar">
@@ -17,27 +19,7 @@
     <div class="main">
         <h1>Corporate Portal</h1>
         <p>Connect your Creatio account to access integrated features and data.</p>
-        {% if error %}
-            <p class="error">{{ error }}</p>
-        {% endif %}
-        {% if activities %}
-            {% if user %}
-                <p>Logged in as {{ user.get('name') or user.get('email') }}</p>
-            {% endif %}
-            <h3>Recent Activities</h3>
-            <ul>
-                {% for act in activities %}
-                    <li>{{ act.get('Title') }}</li>
-                {% else %}
-                    <li>No activities found.</li>
-                {% endfor %}
-            </ul>
-            <a class="btn" href="{{ url_for('refresh') }}">Refresh Token</a>
-            <a class="btn" href="{{ url_for('logout') }}">Logout</a>
-            <a class="btn" href="{{ url_for('revoke') }}">Revoke</a>
-        {% else %}
-            <a class="btn" href="{{ url_for('login') }}">Connect Creatio account</a>
-        {% endif %}
+        <div id="content"></div>
     </div>
 </body>
 </html>

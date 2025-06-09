@@ -3,7 +3,7 @@ import secrets
 from urllib.parse import urlencode
 
 import requests
-from flask import Flask, session, redirect, url_for, request, render_template
+from flask import Flask, session, redirect, url_for, request, render_template, jsonify
 
 # Load configuration from appsettings.json
 with open('appsettings.json') as f:
@@ -56,14 +56,8 @@ def get_userinfo_endpoint():
         return data.get('userinfo_endpoint')
     return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
 
-
-def fetch_user_and_activities():
-    """Retrieve user info and recent activities using current access token."""
-    access_token = TOKENS.get('access_token')
-
-    if not access_token:
-        return None, []
-    headers = {'Authorization': f'Bearer {access_token}'}
+            f"{config['CreatioBaseUrl']}/0/odata/ActivityCollection?$top=50",
+    return render_template('index.html')
     user = None
     activities = []
     userinfo_endpoint = get_userinfo_endpoint()
@@ -124,6 +118,25 @@ def callback():
     state = request.args.get('state')
     if not code or state != session.get('oauth_state'):
         return redirect(url_for('index'))
+
+
+@app.route('/api/activities')
+def api_activities():
+    """Return user info, activities and monthly counts as JSON."""
+    if not TOKENS.get('access_token'):
+        return jsonify({'authenticated': False}), 401
+    result = fetch_user_and_activities()
+    if result == 'refresh':
+        return jsonify({'authenticated': False}), 401
+    user, activities = result
+    counts = {}
+    for act in activities:
+        date_str = act.get('StartDate') or act.get('CreatedOn')
+        if not date_str:
+            continue
+        month = date_str[:7]
+        counts[month] = counts.get(month, 0) + 1
+    return jsonify({'authenticated': True, 'user': user, 'activities': activities, 'counts': counts})
 
     session.pop('oauth_state', None)
 
