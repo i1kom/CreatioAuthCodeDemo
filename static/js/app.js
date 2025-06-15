@@ -3,6 +3,7 @@ Chart.register(ChartDataLabels);
 function createStaticCharts() {
   const fragment = document.createDocumentFragment();
 
+
   // Vacation days left chart
   const vacationContainer = document.createElement('div');
   vacationContainer.className = 'chart-container';
@@ -13,6 +14,7 @@ function createStaticCharts() {
   vacationCanvas.id = 'vacationChart';
   vacationContainer.appendChild(vacationCanvas);
   fragment.appendChild(vacationContainer);
+
 
   // Personal development plan tasks chart
   const pdpContainer = document.createElement('div');
@@ -25,6 +27,7 @@ function createStaticCharts() {
   pdpContainer.appendChild(pdpCanvas);
   fragment.appendChild(pdpContainer);
 
+
   // Bonuses by month chart
   const bonusContainer = document.createElement('div');
   bonusContainer.className = 'chart-container';
@@ -35,6 +38,7 @@ function createStaticCharts() {
   bonusCanvas.id = 'bonusChart';
   bonusContainer.appendChild(bonusCanvas);
   fragment.appendChild(bonusContainer);
+
 
   // Fake data for charts
   new Chart(vacationCanvas.getContext('2d'), {
@@ -83,6 +87,7 @@ function createStaticCharts() {
       scales: {
         y: { beginAtZero: true }
       },
+
       plugins: {
         datalabels: {
           anchor: 'end',
