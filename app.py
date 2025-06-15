@@ -92,13 +92,8 @@ def fetch_user_and_activities():
         activities = []
     return user, activities
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/login')
-def login():
+def build_login_url():
+    """Construct the Creatio authorization URL and store state."""
     authorize_url, _, _ = get_auth_endpoints()
     state = secrets.token_urlsafe(16)
     session['oauth_state'] = state
@@ -109,7 +104,18 @@ def login():
         'scope': config['Scope'],
         'state': state
     }
-    return redirect(f"{authorize_url}?{urlencode(params)}")
+    return f"{authorize_url}?{urlencode(params)}"
+
+
+@app.route('/')
+def index():
+    login_url = build_login_url()
+    return render_template('index.html', login_url=login_url)
+
+
+@app.route('/login')
+def login():
+    return redirect(build_login_url())
 
 @app.route('/callback')
 def callback():
