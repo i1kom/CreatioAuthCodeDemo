@@ -1,11 +1,92 @@
+function renderStaticCharts() {
+  const grid = document.createElement('div');
+  grid.className = 'chart-grid';
+
+  // Vacation days left chart
+  const vacationContainer = document.createElement('div');
+  vacationContainer.className = 'chart-container';
+  const vacationCanvas = document.createElement('canvas');
+  vacationCanvas.id = 'vacationChart';
+  vacationContainer.appendChild(vacationCanvas);
+  grid.appendChild(vacationContainer);
+
+  // Personal development plan tasks chart
+  const pdpContainer = document.createElement('div');
+  pdpContainer.className = 'chart-container';
+  const pdpCanvas = document.createElement('canvas');
+  pdpCanvas.id = 'pdpChart';
+  pdpContainer.appendChild(pdpCanvas);
+  grid.appendChild(pdpContainer);
+
+  // Bonuses by month chart
+  const bonusContainer = document.createElement('div');
+  bonusContainer.className = 'chart-container';
+  const bonusCanvas = document.createElement('canvas');
+  bonusCanvas.id = 'bonusChart';
+  bonusContainer.appendChild(bonusCanvas);
+  grid.appendChild(bonusContainer);
+
+  // Fake data for charts
+  new Chart(vacationCanvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Used', 'Left'],
+      datasets: [{
+        data: [12, 13],
+        backgroundColor: ['#FF6384', '#36A2EB']
+      }]
+    },
+    options: {responsive: true}
+  });
+
+  new Chart(pdpCanvas.getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: ['Closed', 'Open'],
+      datasets: [{
+        data: [80, 20],
+        backgroundColor: ['#4BC0C0', '#FFCE56']
+      }]
+    },
+    options: {responsive: true}
+  });
+
+  new Chart(bonusCanvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      datasets: [{
+        label: 'Bonuses',
+        data: [100, 150, 120, 200, 180, 220, 170, 190, 160, 210, 230, 250],
+        backgroundColor: 'rgba(75,192,192,0.4)',
+        borderColor: 'rgba(75,192,192,1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true }
+      },
+      responsive: true
+    }
+  });
+
+  return grid;
+}
+
 function showConnect() {
   const content = document.getElementById('content');
   content.innerHTML = '';
+  const grid = renderStaticCharts();
+  const container = document.createElement('div');
+  container.className = 'chart-container';
   const btn = document.createElement('a');
   btn.className = 'btn';
   btn.href = '/login';
   btn.textContent = 'Connect Creatio account';
-  content.appendChild(btn);
+  container.appendChild(btn);
+  grid.appendChild(container);
+  content.appendChild(grid);
 }
 
 function showDashboard(data) {
@@ -17,9 +98,14 @@ function showDashboard(data) {
     info.textContent = 'Logged in as ' + name;
     content.appendChild(info);
   }
+  const grid = renderStaticCharts();
+  const activityContainer = document.createElement('div');
+  activityContainer.className = 'chart-container';
   const canvas = document.createElement('canvas');
   canvas.id = 'activityChart';
-  content.appendChild(canvas);
+  activityContainer.appendChild(canvas);
+  grid.appendChild(activityContainer);
+  content.appendChild(grid);
 
   if (data.activities && data.activities.length) {
     const list = document.createElement('ul');
