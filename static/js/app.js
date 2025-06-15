@@ -51,7 +51,6 @@ function createVacationChart() {
   container.appendChild(canvas);
 
   new Chart(canvas.getContext('2d'), {
-
     type: 'doughnut',
     data: {
       labels: ['Used', 'Left'],
