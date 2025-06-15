@@ -1,15 +1,18 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+  display: flex;
+  min-height: 100vh;
 }
 
 .sidebar {
   width: 200px;
   background: #222;
   color: #fff;
-  height: 100vh;
-  position: fixed;
   padding: 20px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h2 {
@@ -24,8 +27,10 @@ body {
 }
 
 .main {
-  margin-left: 220px;
+  flex: 1;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .btn {
@@ -40,3 +45,32 @@ body {
 .error {
   color: red;
 }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+}
+
+.chart-container {
+  width: 100%;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.center-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-container h3 {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 1em;
+}
+
