@@ -5,10 +5,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        window.LOGIN_URL = "{{ url_for('login') }}";
+    </script>
 
 </head>
-<body>
+<body class="layout">
     <div class="sidebar">
         <h2>ALPHABUSINESS</h2>
         <nav>
