@@ -1,15 +1,18 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+  display: flex;
+  min-height: 100vh;
 }
 
 .sidebar {
   width: 200px;
   background: #222;
   color: #fff;
-  height: 100vh;
-  position: fixed;
   padding: 20px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h2 {
@@ -24,8 +27,10 @@ body {
 }
 
 .main {
-  margin-left: 220px;
+  flex: 1;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .btn {
@@ -40,3 +45,15 @@ body {
 .error {
   color: red;
 }
+
+.chart-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.chart-container {
+  flex: 1 1 45%;
+  min-width: 300px;
+}
+
