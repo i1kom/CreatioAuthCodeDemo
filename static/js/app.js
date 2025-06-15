@@ -1,47 +1,29 @@
 Chart.register(ChartDataLabels);
 
-function createStaticCharts() {
-  const fragment = document.createDocumentFragment();
+function createBonusChart() {
+  const container = document.createElement('div');
+  container.className = 'chart-container';
+  const title = document.createElement('h3');
+  title.textContent = 'Bonuses This Year';
+  container.appendChild(title);
+  const canvas = document.createElement('canvas');
+  canvas.id = 'bonusChart';
+  container.appendChild(canvas);
+  new Chart(canvas.getContext('2d'), {
+  return container;
+}
 
+function createVacationChart() {
+  const container = document.createElement('div');
+  container.className = 'chart-container';
+  const title = document.createElement('h3');
+  title.textContent = 'Vacation Days Left';
+  container.appendChild(title);
+  const canvas = document.createElement('canvas');
+  canvas.id = 'vacationChart';
+  container.appendChild(canvas);
 
-  // Vacation days left chart
-  const vacationContainer = document.createElement('div');
-  vacationContainer.className = 'chart-container';
-  const vacationTitle = document.createElement('h3');
-  vacationTitle.textContent = 'Vacation Days Left';
-  vacationContainer.appendChild(vacationTitle);
-  const vacationCanvas = document.createElement('canvas');
-  vacationCanvas.id = 'vacationChart';
-  vacationContainer.appendChild(vacationCanvas);
-  fragment.appendChild(vacationContainer);
-
-
-  // Personal development plan tasks chart
-  const pdpContainer = document.createElement('div');
-  pdpContainer.className = 'chart-container';
-  const pdpTitle = document.createElement('h3');
-  pdpTitle.textContent = 'PDP Tasks Closed';
-  pdpContainer.appendChild(pdpTitle);
-  const pdpCanvas = document.createElement('canvas');
-  pdpCanvas.id = 'pdpChart';
-  pdpContainer.appendChild(pdpCanvas);
-  fragment.appendChild(pdpContainer);
-
-
-  // Bonuses by month chart
-  const bonusContainer = document.createElement('div');
-  bonusContainer.className = 'chart-container';
-  const bonusTitle = document.createElement('h3');
-  bonusTitle.textContent = 'Bonuses This Year';
-  bonusContainer.appendChild(bonusTitle);
-  const bonusCanvas = document.createElement('canvas');
-  bonusCanvas.id = 'bonusChart';
-  bonusContainer.appendChild(bonusCanvas);
-  fragment.appendChild(bonusContainer);
-
-
-  // Fake data for charts
-  new Chart(vacationCanvas.getContext('2d'), {
+  new Chart(canvas.getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: ['Used', 'Left'],
@@ -56,7 +38,20 @@ function createStaticCharts() {
     }
   });
 
-  new Chart(pdpCanvas.getContext('2d'), {
+  return container;
+}
+
+function createPdpChart() {
+  const container = document.createElement('div');
+  container.className = 'chart-container';
+  const title = document.createElement('h3');
+  title.textContent = 'PDP Tasks Closed';
+  container.appendChild(title);
+  const canvas = document.createElement('canvas');
+  canvas.id = 'pdpChart';
+  container.appendChild(canvas);
+
+  new Chart(canvas.getContext('2d'), {
     type: 'pie',
     data: {
       labels: ['Closed', 'Open'],
@@ -70,11 +65,18 @@ function createStaticCharts() {
       plugins: { datalabels: { color: '#000' } }
     }
   });
-
-  new Chart(bonusCanvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  return container;
+  grid.appendChild(createBonusChart());
+  const btnContainer = document.createElement('div');
+  btnContainer.className = 'chart-container center-content';
+  btn.href = window.LOGIN_URL || '/login';
+  btnContainer.appendChild(btn);
+  grid.appendChild(btnContainer);
+  grid.appendChild(createVacationChart());
+  grid.appendChild(createPdpChart());
+  grid.appendChild(createBonusChart());
+  grid.appendChild(createVacationChart());
+  grid.appendChild(createPdpChart());
       datasets: [{
         label: 'Bonuses',
         data: [100, 150, 120, 200, 180, 220, 170, 190, 160, 210, 230, 250],
