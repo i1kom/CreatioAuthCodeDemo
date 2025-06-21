@@ -400,6 +400,34 @@ def logout():
     session.pop('oauth_state', None)
     return resp
 
+
+@app.route('/create-user', methods=['GET', 'POST'])
+@login_required
+def create_user():
+    """Create a new local user."""
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if not username or not password:
+            error = 'Username and password required'
+        else:
+            pw_hash = hashlib.sha256(password.encode()).hexdigest()
+            conn = get_db_connection()
+            try:
+                conn.execute(
+                    'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+                    (username, pw_hash),
+                )
+                conn.commit()
+                conn.close()
+                return redirect(url_for('index'))
+            except sqlite3.IntegrityError:
+                error = 'User already exists'
+            finally:
+                conn.close()
+    return render_template('create_user.html', error=error)
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
