@@ -6,19 +6,28 @@ from urllib.parse import urlencode
 
 import requests
 
-from flask import Flask, session, redirect, url_for, request, render_template, jsonify
-
-# Get the directory of the main script
-script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-
-# Change working directory
-os.chdir(script_dir)
-
-
-# Load configuration from appsettings.json
-with open('appsettings.json') as f:
-    config = json.load(f)
-
+        try:
+            resp = requests.get(
+                f"{config['CreatioBaseUrl']}/.well-known/openid-configuration",
+                timeout=5,
+            )
+            resp.raise_for_status()
+            openid_config_cache = resp.json()
+        except requests.RequestException:
+            # Cache an empty dict so the app keeps running even if Creatio is down
+            openid_config_cache = {}
+    if config.get('UseDiscoveryEndpoint', False):
+        data = get_openid_configuration() or {}
+        auth = data.get('authorization_endpoint')
+        token = data.get('token_endpoint')
+        revoke = data.get('revocation_endpoint')
+        if auth and token:
+            return auth, token, revoke
+        f"{base}/0/connect/revocation",
+        data = get_openid_configuration() or {}
+        endpoint = data.get('userinfo_endpoint')
+        if endpoint:
+            return endpoint
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
 
@@ -115,9 +124,13 @@ def build_login_url():
     return f"{authorize_url}?{urlencode(params)}"
 
 
-@app.route('/')
-def index():
-    login_url = build_login_url()
+    try:
+        resp = requests.post(token_url, data=data, timeout=5)
+        resp.raise_for_status()
+        token_data = resp.json()
+    except requests.RequestException:
+        # If Creatio is unreachable, show an error but keep the app running
+        return render_template('index.html', error='Failed to connect to Creatio')
     return render_template('index.html', login_url=login_url)
 
 
@@ -171,14 +184,15 @@ def dashboard():
     return render_template('dashboard.html', user=user, activities=activities)
 
 
-@app.route('/api/activities')
-def api_activities():
-    """Return user info, activities and monthly counts as JSON."""
-    if not TOKENS.get('access_token'):
-        return jsonify({'authenticated': False}), 401
-    result = fetch_user_and_activities()
-    if result == 'refresh':
-        return jsonify({'authenticated': False}), 401
+    try:
+        resp = requests.post(token_url, data=data, timeout=5)
+        if resp.status_code == 200:
+            token_data = resp.json()
+            TOKENS['access_token'] = token_data.get('access_token')
+            TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
+            return redirect(url_for('index'))
+    except requests.RequestException:
+        pass
     user, activities = result
     counts = {}
     for act in activities:
