@@ -1,5 +1,45 @@
 Chart.register(ChartDataLabels);
 
+function stringToColor(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h},70%,50%)`;
+}
+
+function renderTopPanel(username, userId) {
+  const panel = document.getElementById('top-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  const avatar = document.createElement('div');
+  avatar.className = 'user-avatar';
+  avatar.textContent = username ? username.charAt(0).toUpperCase() : '';
+  avatar.style.backgroundColor = stringToColor(String(userId));
+  const menu = document.createElement('div');
+  menu.className = 'user-menu';
+  const logout = document.createElement('a');
+  logout.href = '/logout';
+  logout.textContent = 'Logout';
+  menu.appendChild(logout);
+  avatar.addEventListener('click', () => {
+    menu.classList.toggle('show');
+  });
+  panel.appendChild(avatar);
+  panel.appendChild(menu);
+}
+
+function showPreloader() {
+  const p = document.getElementById('preloader');
+  if (p) p.classList.remove('hidden');
+}
+
+function hidePreloader() {
+  const p = document.getElementById('preloader');
+  if (p) p.classList.add('hidden');
+}
+
 function createBonusChart() {
   const container = document.createElement('div');
   container.className = 'chart-container';
@@ -112,6 +152,10 @@ function showConnect() {
   grid.appendChild(createVacationChart());
   grid.appendChild(createPdpChart());
   content.appendChild(grid);
+  const local = data.localUser || window.LOCAL_USER;
+  if (local) {
+    renderTopPanel(local.username, local.id);
+  }
 }
 
 function showDashboard(data) {
@@ -178,24 +222,26 @@ function showDashboard(data) {
     }
   });
 
-  const actions = document.createElement('div');
-  actions.innerHTML = `
-      <a class="btn" href="/refresh">Refresh Token</a>
-      <a class="btn" href="/logout">Logout</a>
-      <a class="btn" href="/revoke">Revoke</a>
-    `;
-  content.appendChild(actions);
+  const local = data.localUser || window.LOCAL_USER;
+  if (local) {
+    renderTopPanel(local.username, local.id);
+  }
 }
 
 function loadData() {
+  showPreloader();
   fetch('/api/activities')
     .then(resp => {
+      hidePreloader();
       if (resp.ok) {
         return resp.json().then(data => showDashboard(data));
       }
       showConnect();
     })
-    .catch(() => showConnect());
+    .catch(() => {
+      hidePreloader();
+      showConnect();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadData);

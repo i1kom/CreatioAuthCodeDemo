@@ -239,7 +239,12 @@ def login():
 @login_required
 def index():
     login_url = build_login_url()
-    return render_template('index.html', login_url=login_url)
+    return render_template(
+        'index.html',
+        login_url=login_url,
+        user_id=g.user['id'],
+        username=g.user['username']
+    )
 
 
 @app.route('/creatio/login')
@@ -323,7 +328,16 @@ def api_activities():
             continue
         month = date_str[:7]
         counts[month] = counts.get(month, 0) + 1
-    return jsonify({'authenticated': True, 'user': user, 'activities': activities, 'counts': counts})
+    return jsonify({
+        'authenticated': True,
+        'user': user,
+        'activities': activities,
+        'counts': counts,
+        'localUser': {
+            'id': g.user['id'],
+            'username': g.user['username']
+        }
+    })
 
 @app.route('/refresh')
 @login_required
