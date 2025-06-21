@@ -105,7 +105,7 @@ function showConnect() {
   btnContainer.className = 'chart-container center-content';
   const btn = document.createElement('a');
   btn.className = 'btn';
-  btn.href = window.LOGIN_URL || '/login';
+  btn.href = window.LOGIN_URL || '/creatio/login';
   btn.textContent = 'Connect Creatio account';
   btnContainer.appendChild(btn);
   grid.appendChild(btnContainer);

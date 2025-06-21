@@ -3,6 +3,7 @@ import secrets
 import os
 import sys
 from urllib.parse import urlencode
+from functools import wraps
 
 import requests
 
@@ -32,6 +33,15 @@ def clear_tokens():
     """Remove stored tokens."""
     TOKENS['access_token'] = None
     TOKENS['refresh_token'] = None
+
+def login_required(func):
+    """Redirect to Auth0 login if no user session."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('auth_login'))
+        return func(*args, **kwargs)
+    return wrapper
 
 openid_config_cache = None
 
@@ -124,18 +134,64 @@ def build_login_url():
     return f"{authorize_url}?{urlencode(params)}"
 
 
+@app.route('/auth/login')
+def auth_login():
+    """Redirect user to Auth0 authorization endpoint."""
+    params = {
+        'response_type': 'code',
+        'client_id': config['Auth0ClientId'],
+        'redirect_uri': config['Auth0CallbackUri'],
+        'scope': 'openid profile email'
+    }
+    url = f"https://{config['Auth0Domain']}/authorize?{urlencode(params)}"
+    return redirect(url)
+
+
+@app.route('/auth/callback')
+def auth_callback():
+    """Handle Auth0 callback and store user info in session."""
+    code = request.args.get('code')
+    if not code:
+        return redirect(url_for('auth_login'))
+    token_url = f"https://{config['Auth0Domain']}/oauth/token"
+    data = {
+        'grant_type': 'authorization_code',
+        'client_id': config['Auth0ClientId'],
+        'client_secret': config['Auth0ClientSecret'],
+        'code': code,
+        'redirect_uri': config['Auth0CallbackUri'],
+    }
+    try:
+        resp = requests.post(token_url, json=data, timeout=5)
+        resp.raise_for_status()
+        access_token = resp.json().get('access_token')
+    except requests.RequestException:
+        return redirect(url_for('auth_login'))
+    userinfo_url = f"https://{config['Auth0Domain']}/userinfo"
+    try:
+        uresp = requests.get(userinfo_url, headers={'Authorization': f'Bearer {access_token}'})
+        uresp.raise_for_status()
+        session['user'] = uresp.json()
+    except requests.RequestException:
+        session['user'] = {}
+    return redirect(url_for('index'))
+
+
 @app.route('/')
+@login_required
 def index():
     login_url = build_login_url()
     return render_template('index.html', login_url=login_url)
 
 
-@app.route('/login')
-def login():
+@app.route('/creatio/login')
+@login_required
+def creatio_login():
     return redirect(build_login_url())
 
-@app.route('/callback')
-def callback():
+@app.route('/creatio/callback')
+@login_required
+def creatio_callback():
     error = request.args.get('error')
     if error:
         return render_template('index.html', error=error)
@@ -169,6 +225,7 @@ def callback():
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
 
     if not TOKENS.get('access_token'):
@@ -185,6 +242,7 @@ def dashboard():
 
 
 @app.route('/api/activities')
+@login_required
 def api_activities():
     """Return user info, activities and monthly counts as JSON."""
     if not TOKENS.get('access_token'):
@@ -203,6 +261,7 @@ def api_activities():
     return jsonify({'authenticated': True, 'user': user, 'activities': activities, 'counts': counts})
 
 @app.route('/refresh')
+@login_required
 def refresh():
     refresh_token = TOKENS.get('refresh_token')
 
@@ -229,6 +288,7 @@ def refresh():
     return redirect(url_for('index'))
 
 @app.route('/revoke')
+@login_required
 def revoke():
 
     refresh_token = TOKENS.get('refresh_token')
@@ -254,10 +314,10 @@ def revoke():
 
 @app.route('/logout')
 def logout():
-
     clear_tokens()
-
-    return redirect(url_for('index'))
+    session.pop('user', None)
+    session.pop('oauth_state', None)
+    return redirect(url_for('auth_login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
