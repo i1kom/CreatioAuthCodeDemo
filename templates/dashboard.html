@@ -15,6 +15,7 @@
         </nav>
     </div>
     <div class="main">
+        <div id="top-panel" class="top-panel"></div>
         <h1>Corporate Portal</h1>
         {% if user %}
             <p>Logged in as {{ user.get('name') or user.get('email') }}</p>
@@ -27,9 +28,8 @@
                 <li>No activities found.</li>
             {% endfor %}
         </ul>
-        <a class="btn" href="{{ url_for('refresh') }}">Refresh Token</a>
         <a class="btn" href="{{ url_for('logout') }}">Logout</a>
-        <a class="btn" href="{{ url_for('revoke') }}">Revoke</a>
     </div>
+    <div id="preloader" class="preloader hidden">Loading...</div>
 </body>
 </html>

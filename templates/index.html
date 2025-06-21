@@ -9,6 +9,7 @@
     <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
         window.LOGIN_URL = {{ login_url|tojson|safe }};
+        window.LOCAL_USER = {{ {'id': user_id, 'username': username}|tojson|safe }};
     </script>
 
 </head>
@@ -27,11 +28,13 @@
         </nav>
     </div>
     <div class="main">
+        <div id="top-panel" class="top-panel"></div>
         <h1>Home page</h1>
         <p>Connect your Creatio account to access integrated features and data.</p>
 
         <div id="content"></div>
 
     </div>
+    <div id="preloader" class="preloader hidden">Loading...</div>
 </body>
 </html>
