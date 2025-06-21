@@ -1,10 +1,18 @@
 import json
 import secrets
+import os
+import sys
 from urllib.parse import urlencode
 
 import requests
 
 from flask import Flask, session, redirect, url_for, request, render_template, jsonify
+
+# Get the directory of the main script
+script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+# Change working directory
+os.chdir(script_dir)
 
 
 # Load configuration from appsettings.json
