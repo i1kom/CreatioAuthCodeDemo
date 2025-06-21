@@ -31,31 +31,40 @@ def get_openid_configuration():
     """Retrieve and cache the discovery document."""
     global openid_config_cache
     if openid_config_cache is None:
-        resp = requests.get(f"{config['CreatioBaseUrl']}/.well-known/openid-configuration")
-        resp.raise_for_status()
-        openid_config_cache = resp.json()
+        try:
+            resp = requests.get(
+                f"{config['CreatioBaseUrl']}/.well-known/openid-configuration",
+                timeout=5,
+            )
+            resp.raise_for_status()
+            openid_config_cache = resp.json()
+        except requests.RequestException:
+            # Cache an empty dict so the app keeps running even if Creatio is down
+            openid_config_cache = {}
     return openid_config_cache
 
 def get_auth_endpoints():
     """Return authorize, token and revocation endpoints."""
-    if config.get('UseDiscoveryEndpoint', False):
-        data = get_openid_configuration()
-        return (
-            data['authorization_endpoint'],
-            data['token_endpoint'],
-            data.get('revocation_endpoint')
-        )
     base = config['CreatioBaseUrl']
+    if config.get('UseDiscoveryEndpoint', False):
+        data = get_openid_configuration() or {}
+        auth = data.get('authorization_endpoint')
+        token = data.get('token_endpoint')
+        revoke = data.get('revocation_endpoint')
+        if auth and token:
+            return auth, token, revoke
     return (
         f"{base}/0/connect/authorize",
         f"{base}/0/connect/token",
-        f"{base}/0/connect/revocation"
+        f"{base}/0/connect/revocation",
     )
 
 def get_userinfo_endpoint():
     if config.get('UseDiscoveryEndpoint', False):
-        data = get_openid_configuration()
-        return data.get('userinfo_endpoint')
+        data = get_openid_configuration() or {}
+        endpoint = data.get('userinfo_endpoint')
+        if endpoint:
+            return endpoint
     return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
 
 
@@ -92,13 +101,8 @@ def fetch_user_and_activities():
         activities = []
     return user, activities
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/login')
-def login():
+def build_login_url():
+    """Construct the Creatio authorization URL and store state."""
     authorize_url, _, _ = get_auth_endpoints()
     state = secrets.token_urlsafe(16)
     session['oauth_state'] = state
@@ -109,7 +113,18 @@ def login():
         'scope': config['Scope'],
         'state': state
     }
-    return redirect(f"{authorize_url}?{urlencode(params)}")
+    return f"{authorize_url}?{urlencode(params)}"
+
+
+@app.route('/')
+def index():
+    login_url = build_login_url()
+    return render_template('index.html', login_url=login_url)
+
+
+@app.route('/login')
+def login():
+    return redirect(build_login_url())
 
 @app.route('/callback')
 def callback():
@@ -132,9 +147,13 @@ def callback():
         'grant_type': 'authorization_code',
         'scope': config['Scope']
     }
-    resp = requests.post(token_url, data=data)
-    resp.raise_for_status()
-    token_data = resp.json()
+    try:
+        resp = requests.post(token_url, data=data, timeout=5)
+        resp.raise_for_status()
+        token_data = resp.json()
+    except requests.RequestException:
+        # If Creatio is unreachable, show an error but keep the app running
+        return render_template('index.html', error='Failed to connect to Creatio')
 
     TOKENS['access_token'] = token_data.get('access_token')
     TOKENS['refresh_token'] = token_data.get('refresh_token')
@@ -189,15 +208,16 @@ def refresh():
         'refresh_token': refresh_token,
         'scope': config['Scope']
     }
-    resp = requests.post(token_url, data=data)
-    if resp.status_code == 200:
-        token_data = resp.json()
-
-        TOKENS['access_token'] = token_data.get('access_token')
-        TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
-        return redirect(url_for('index'))
+    try:
+        resp = requests.post(token_url, data=data, timeout=5)
+        if resp.status_code == 200:
+            token_data = resp.json()
+            TOKENS['access_token'] = token_data.get('access_token')
+            TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
+            return redirect(url_for('index'))
+    except requests.RequestException:
+        pass
     clear_tokens()
-
     return redirect(url_for('index'))
 
 @app.route('/revoke')
