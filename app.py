@@ -4,10 +4,15 @@ import os
 import sys
 from urllib.parse import urlencode
 from functools import wraps
+import base64
+import hashlib
+import hmac
+import time
+import sqlite3
 
 import requests
 
-from flask import Flask, session, redirect, url_for, request, render_template, jsonify
+from flask import Flask, redirect, url_for, request, render_template, jsonify, g, session
 
 # Get the directory of the main script
 script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -23,24 +28,102 @@ with open('appsettings.json') as f:
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
 
-# Global storage for access and refresh tokens
-TOKENS = {
-    'access_token': None,
-    'refresh_token': None
-}
+DATABASE = 'users.db'
 
-def clear_tokens():
-    """Remove stored tokens."""
-    TOKENS['access_token'] = None
-    TOKENS['refresh_token'] = None
+
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db_connection()
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            creatio_access_token TEXT,
+            creatio_refresh_token TEXT
+        )"""
+    )
+    conn.commit()
+    cur = conn.execute('SELECT COUNT(*) FROM users')
+    if cur.fetchone()[0] == 0:
+        pw_hash = hashlib.sha256('password'.encode()).hexdigest()
+        conn.execute(
+            'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+            ('admin', pw_hash),
+        )
+        conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+def clear_tokens(user_id):
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE users SET creatio_access_token=NULL, creatio_refresh_token=NULL WHERE id=?',
+        (user_id,),
+    )
+    conn.commit()
+    conn.close()
+
+def encode_segment(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
+
+
+def decode_segment(segment: str) -> bytes:
+    padding = '=' * (-len(segment) % 4)
+    return base64.urlsafe_b64decode(segment + padding)
+
+
+def create_jwt(payload: dict) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_b64 = encode_segment(json.dumps(header).encode())
+    payload_b64 = encode_segment(json.dumps(payload).encode())
+    signing_input = f"{header_b64}.{payload_b64}".encode()
+    signature = hmac.new(app.secret_key.encode(), signing_input, hashlib.sha256).digest()
+    sig_b64 = encode_segment(signature)
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+
+def verify_jwt(token: str) -> dict:
+    try:
+        header_b64, payload_b64, sig_b64 = token.split('.')
+    except ValueError:
+        raise ValueError('Bad token')
+    signing_input = f"{header_b64}.{payload_b64}".encode()
+    expected = hmac.new(app.secret_key.encode(), signing_input, hashlib.sha256).digest()
+    if not hmac.compare_digest(expected, decode_segment(sig_b64)):
+        raise ValueError('Bad signature')
+    payload = json.loads(decode_segment(payload_b64))
+    if payload.get('exp', 0) < int(time.time()):
+        raise ValueError('Expired')
+    return payload
+
 
 def login_required(func):
-    """Redirect to Auth0 login if no user session."""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('auth_login'))
+        token = request.cookies.get('auth_token')
+        if not token:
+            return redirect(url_for('login'))
+        try:
+            payload = verify_jwt(token)
+        except Exception:
+            return redirect(url_for('login'))
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE id=?', (payload.get('sub'),)).fetchone()
+        conn.close()
+        if user is None:
+            return redirect(url_for('login'))
+        g.user = user
         return func(*args, **kwargs)
+
     return wrapper
 
 openid_config_cache = None
@@ -88,7 +171,7 @@ def get_userinfo_endpoint():
 
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
-    access_token = TOKENS.get('access_token')
+    access_token = g.user['creatio_access_token']
 
     if not access_token:
         return None, []
@@ -134,47 +217,22 @@ def build_login_url():
     return f"{authorize_url}?{urlencode(params)}"
 
 
-@app.route('/auth/login')
-def auth_login():
-    """Redirect user to Auth0 authorization endpoint."""
-    params = {
-        'response_type': 'code',
-        'client_id': config['Auth0ClientId'],
-        'redirect_uri': config['Auth0CallbackUri'],
-        'scope': 'openid profile email'
-    }
-    url = f"https://{config['Auth0Domain']}/authorize?{urlencode(params)}"
-    return redirect(url)
-
-
-@app.route('/auth/callback')
-def auth_callback():
-    """Handle Auth0 callback and store user info in session."""
-    code = request.args.get('code')
-    if not code:
-        return redirect(url_for('auth_login'))
-    token_url = f"https://{config['Auth0Domain']}/oauth/token"
-    data = {
-        'grant_type': 'authorization_code',
-        'client_id': config['Auth0ClientId'],
-        'client_secret': config['Auth0ClientSecret'],
-        'code': code,
-        'redirect_uri': config['Auth0CallbackUri'],
-    }
-    try:
-        resp = requests.post(token_url, json=data, timeout=5)
-        resp.raise_for_status()
-        access_token = resp.json().get('access_token')
-    except requests.RequestException:
-        return redirect(url_for('auth_login'))
-    userinfo_url = f"https://{config['Auth0Domain']}/userinfo"
-    try:
-        uresp = requests.get(userinfo_url, headers={'Authorization': f'Bearer {access_token}'})
-        uresp.raise_for_status()
-        session['user'] = uresp.json()
-    except requests.RequestException:
-        session['user'] = {}
-    return redirect(url_for('index'))
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username=?', (username,)).fetchone()
+        conn.close()
+        if user and user['password_hash'] == hashlib.sha256(password.encode()).hexdigest():
+            token = create_jwt({'sub': user['id'], 'exp': int(time.time()) + 3600})
+            resp = redirect(url_for('index'))
+            resp.set_cookie('auth_token', token, httponly=True)
+            return resp
+        error = 'Invalid credentials'
+    return render_template('login.html', error=error)
 
 
 @app.route('/')
@@ -219,17 +277,24 @@ def creatio_callback():
         # If Creatio is unreachable, show an error but keep the app running
         return render_template('index.html', error='Failed to connect to Creatio')
 
-    TOKENS['access_token'] = token_data.get('access_token')
-    TOKENS['refresh_token'] = token_data.get('refresh_token')
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE users SET creatio_access_token=?, creatio_refresh_token=? WHERE id=?',
+        (
+            token_data.get('access_token'),
+            token_data.get('refresh_token'),
+            g.user['id'],
+        ),
+    )
+    conn.commit()
+    conn.close()
 
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-
-    if not TOKENS.get('access_token'):
-
+    if not g.user['creatio_access_token']:
         return redirect(url_for('index'))
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -245,7 +310,7 @@ def dashboard():
 @login_required
 def api_activities():
     """Return user info, activities and monthly counts as JSON."""
-    if not TOKENS.get('access_token'):
+    if not g.user['creatio_access_token']:
         return jsonify({'authenticated': False}), 401
     result = fetch_user_and_activities()
     if result == 'refresh':
@@ -263,7 +328,7 @@ def api_activities():
 @app.route('/refresh')
 @login_required
 def refresh():
-    refresh_token = TOKENS.get('refresh_token')
+    refresh_token = g.user['creatio_refresh_token']
 
     if not refresh_token:
         return redirect(url_for('index'))
@@ -279,21 +344,30 @@ def refresh():
         resp = requests.post(token_url, data=data, timeout=5)
         if resp.status_code == 200:
             token_data = resp.json()
-            TOKENS['access_token'] = token_data.get('access_token')
-            TOKENS['refresh_token'] = token_data.get('refresh_token', refresh_token)
+            conn = get_db_connection()
+            conn.execute(
+                'UPDATE users SET creatio_access_token=?, creatio_refresh_token=? WHERE id=?',
+                (
+                    token_data.get('access_token'),
+                    token_data.get('refresh_token', refresh_token),
+                    g.user['id'],
+                ),
+            )
+            conn.commit()
+            conn.close()
             return redirect(url_for('index'))
     except requests.RequestException:
         pass
-    clear_tokens()
+    clear_tokens(g.user['id'])
     return redirect(url_for('index'))
 
 @app.route('/revoke')
 @login_required
 def revoke():
 
-    refresh_token = TOKENS.get('refresh_token')
+    refresh_token = g.user['creatio_refresh_token']
     if not refresh_token:
-        clear_tokens()
+        clear_tokens(g.user['id'])
 
         return redirect(url_for('index'))
     _, _, revocation_url = get_auth_endpoints()
@@ -308,16 +382,24 @@ def revoke():
     except requests.RequestException:
         pass
 
-    clear_tokens()
+    clear_tokens(g.user['id'])
 
     return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
-    clear_tokens()
-    session.pop('user', None)
+    token = request.cookies.get('auth_token')
+    if token:
+        try:
+            payload = verify_jwt(token)
+            clear_tokens(payload.get('sub'))
+        except Exception:
+            pass
+    resp = redirect(url_for('login'))
+    resp.delete_cookie('auth_token')
     session.pop('oauth_state', None)
-    return redirect(url_for('auth_login'))
+    return resp
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)

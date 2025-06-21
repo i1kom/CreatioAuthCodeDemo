@@ -74,3 +74,13 @@ body {
   font-size: 1em;
 }
 
+.login-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+}
+.login-box input {
+  padding: 8px;
+}
+
