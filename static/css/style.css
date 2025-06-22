@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Montserrat', Arial, sans-serif;
   display: flex;
   min-height: 100vh;
 }
@@ -51,15 +53,38 @@ body {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   width: 100%;
+  grid-auto-rows: minmax(0, 400px);
 }
 
 .chart-container {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chart-container canvas {
   width: 100% !important;
   height: auto !important;
+}
+
+.pie-container {
+  align-items: center;
+}
+
+.pie-wrapper {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pie-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .center-content {
@@ -152,5 +177,12 @@ body {
 
 .preloader.hidden {
   display: none;
+}
+
+.logo-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  vertical-align: middle;
 }
 

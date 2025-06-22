@@ -107,13 +107,16 @@ function createBonusChart() {
 
 function createVacationChart() {
   const container = document.createElement('div');
-  container.className = 'chart-container';
+  container.className = 'chart-container pie-container';
   const title = document.createElement('h3');
   title.textContent = 'Vacation Days Left';
   container.appendChild(title);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pie-wrapper';
   const canvas = document.createElement('canvas');
   canvas.id = 'vacationChart';
-  container.appendChild(canvas);
+  wrapper.appendChild(canvas);
+  container.appendChild(wrapper);
 
   new Chart(canvas.getContext('2d'), {
     type: 'doughnut',
@@ -126,6 +129,7 @@ function createVacationChart() {
     },
     options: {
       responsive: true,
+      aspectRatio: 1,
       plugins: { datalabels: { color: '#000' } }
     }
   });
@@ -135,13 +139,16 @@ function createVacationChart() {
 
 function createPdpChart() {
   const container = document.createElement('div');
-  container.className = 'chart-container';
+  container.className = 'chart-container pie-container';
   const title = document.createElement('h3');
   title.textContent = 'PDP Tasks Closed';
   container.appendChild(title);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pie-wrapper';
   const canvas = document.createElement('canvas');
   canvas.id = 'pdpChart';
-  container.appendChild(canvas);
+  wrapper.appendChild(canvas);
+  container.appendChild(wrapper);
 
   new Chart(canvas.getContext('2d'), {
     type: 'pie',
@@ -154,6 +161,7 @@ function createPdpChart() {
     },
     options: {
       responsive: true,
+      aspectRatio: 1,
       plugins: { datalabels: { color: '#000' } }
     }
   });
@@ -171,7 +179,7 @@ function showConnect() {
   const btn = document.createElement('a');
   btn.className = 'btn';
   btn.href = window.LOGIN_URL || '/creatio/login';
-  btn.textContent = 'Connect Creatio account';
+  btn.innerHTML = '<img src="/static/img/creatio-logo.svg" class="logo-icon" alt="Creatio"> Connect Creatio account';
   btnContainer.appendChild(btn);
   const desc = document.createElement('p');
   desc.textContent = 'Connect your Creatio account to access integrated features and data.';
@@ -231,8 +239,8 @@ function showDashboard(data) {
       datasets: [{
         label: 'Activities by Month',
         data: values,
-        backgroundColor: 'rgba(75,192,192,0.4)',
-        borderColor: 'rgba(75,192,192,1)',
+        backgroundColor: 'rgba(255,165,0,0.4)',
+        borderColor: 'rgba(255,165,0,1)',
         borderWidth: 1
       }]
     },
