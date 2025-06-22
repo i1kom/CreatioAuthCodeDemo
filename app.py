@@ -28,6 +28,16 @@ with open('appsettings.json') as f:
 
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configure logging to write Creatio request info to a file with timestamps
+logging.basicConfig(
+    level=logging.INFO,
+    filename='creatio_token_requests.log',
+    format='%(asctime)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Configure logging: console for all requests, file for token operations
 logging.basicConfig(level=logging.INFO)
@@ -217,7 +227,7 @@ def fetch_user_and_activities():
     activities = []
     try:
         aresp = creatio_get(
-            f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
+            f"{config['CreatioBaseUrl']}/0/odata/Activity",
             headers=headers
         )
         if aresp.status_code == 401:
