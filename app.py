@@ -213,7 +213,7 @@ def fetch_user_and_activities():
             user = None
     try:
         aresp = creatio_get(
-            f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
+            f"{config['CreatioBaseUrl']}/0/odata/Activity",
 
             headers=headers
         )
