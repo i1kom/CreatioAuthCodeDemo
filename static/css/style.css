@@ -213,3 +213,13 @@ body {
   vertical-align: middle;
 }
 
+.form-title {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.login-btn {
+  background-color: #000;
+}
+

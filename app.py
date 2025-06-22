@@ -28,6 +28,32 @@ with open('appsettings.json') as f:
 
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configure logging to write Creatio request info to a file with timestamps
+logging.basicConfig(
+    level=logging.INFO,
+    filename='creatio_token_requests.log',
+    format='%(asctime)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Configure logging: console for all requests, file for token operations
+logging.basicConfig(level=logging.INFO)
+console_logger = logging.getLogger('creatio_console')
+if not console_logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setFormatter(logging.Formatter('%(message)s'))
+    console_logger.addHandler(ch)
+
+file_logger = logging.getLogger('creatio_file')
+if not file_logger.handlers:
+    fh = logging.FileHandler('creatio_token_requests.log')
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    file_logger.addHandler(fh)
+file_logger.setLevel(logging.INFO)
+
 
 # Configure logging: console for all requests, file for token operations
 logging.basicConfig(level=logging.INFO)
@@ -107,12 +133,14 @@ def creatio_request(method: str, url: str, log=False, log_response=True, **kwarg
         raise
 
 
+
 def creatio_get(url: str, log=False, log_response=True, **kwargs):
     return creatio_request("GET", url, log=log, log_response=log_response, **kwargs)
 
 
 def creatio_post(url: str, log=False, log_response=True, **kwargs):
     return creatio_request("POST", url, log=log, log_response=log_response, **kwargs)
+
 
 
 def clear_tokens(user_id):
@@ -223,9 +251,10 @@ def fetch_user_and_activities():
     activities = []
     try:
         aresp = creatio_get(
-            f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
+            f"{config['CreatioBaseUrl']}/0/odata/Activity",
             headers=headers,
             log_response=False
+
         )
         if aresp.status_code == 401 or aresp.text.startswith(LOGIN_PAGE_PREFIX):
             return 'refresh', []
