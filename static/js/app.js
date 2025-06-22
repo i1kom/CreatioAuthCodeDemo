@@ -1,5 +1,19 @@
 Chart.register(ChartDataLabels);
 
+// plugin to add extra margin between legend and chart area
+const legendMargin = {
+  id: 'legendMargin',
+  beforeInit(chart, args, options) {
+    const fit = chart.legend.fit;
+    chart.legend.fit = function fitWithMargin() {
+      fit.bind(chart.legend)();
+      this.height += (options && options.margin) || 0;
+    };
+  }
+};
+Chart.register(legendMargin);
+Chart.defaults.plugins.legendMargin = { margin: 24 };
+
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -98,6 +112,7 @@ function createBonusChart() {
           color: '#000'
         }
       },
+      layout: { padding: { bottom: 24 } },
       responsive: true
     }
   });
@@ -130,7 +145,8 @@ function createVacationChart() {
     options: {
       responsive: true,
       aspectRatio: 1,
-      plugins: { datalabels: { color: '#000' } }
+      plugins: { datalabels: { color: '#000' } },
+      layout: { padding: { bottom: 24 } }
     }
   });
 
@@ -162,7 +178,8 @@ function createPdpChart() {
     options: {
       responsive: true,
       aspectRatio: 1,
-      plugins: { datalabels: { color: '#000' } }
+      plugins: { datalabels: { color: '#000' } },
+      layout: { padding: { bottom: 24 } }
     }
   });
   return container;
@@ -209,7 +226,7 @@ function showDashboard(data) {
   const activityContainer = document.createElement('div');
   activityContainer.className = 'chart-container';
   const actTitle = document.createElement('h3');
-  actTitle.textContent = 'Activities by Month';
+  actTitle.textContent = 'Calls by Month';
   activityContainer.appendChild(actTitle);
   const canvas = document.createElement('canvas');
   canvas.id = 'activityChart';
@@ -219,15 +236,7 @@ function showDashboard(data) {
   grid.appendChild(createPdpChart());
   content.appendChild(grid);
 
-  if (data.activities && data.activities.length) {
-    const list = document.createElement('ul');
-    data.activities.forEach(a => {
-      const li = document.createElement('li');
-      li.textContent = a.Title;
-      list.appendChild(li);
-    });
-    content.appendChild(list);
-  }
+  // Activity titles are no longer displayed
 
   const labels = Object.keys(data.counts).sort();
   const values = labels.map(l => data.counts[l]);
@@ -237,7 +246,7 @@ function showDashboard(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Activities by Month',
+        label: 'Calls by Month',
         data: values,
         backgroundColor: 'rgba(255,165,0,0.4)',
         borderColor: 'rgba(255,165,0,1)',
@@ -254,7 +263,8 @@ function showDashboard(data) {
           align: 'top',
           color: '#000'
         }
-      }
+      },
+      layout: { padding: { bottom: 24 } }
     }
   });
 
