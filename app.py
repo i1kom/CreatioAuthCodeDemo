@@ -31,6 +31,14 @@ app.secret_key = 'replace_with_secure_key'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configure logging to write Creatio request info to a file with timestamps
+logging.basicConfig(
+    level=logging.INFO,
+    filename='creatio_token_requests.log',
+    format='%(asctime)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 DATABASE = 'users.db'
 
 
@@ -66,24 +74,27 @@ def init_db():
 init_db()
 
 
-def creatio_request(method: str, url: str, **kwargs):
-    """Make an HTTP request to Creatio and log the URL and response body."""
-    logger.info("Request URL: %s", url)
+def creatio_request(method: str, url: str, log=False, **kwargs):
+    """Make an HTTP request to Creatio and optionally log the URL and response."""
+    if log:
+        logger.info("Request URL: %s", url)
     try:
         response = requests.request(method, url, **kwargs)
-        logger.info("Response body: %s", response.text)
+        if log:
+            logger.info("Response body: %s", response.text)
         return response
     except requests.RequestException as exc:
-        logger.info("Request to %s failed: %s", url, exc)
+        if log:
+            logger.info("Request to %s failed: %s", url, exc)
         raise
 
 
-def creatio_get(url: str, **kwargs):
-    return creatio_request("GET", url, **kwargs)
+def creatio_get(url: str, log=False, **kwargs):
+    return creatio_request("GET", url, log=log, **kwargs)
 
 
-def creatio_post(url: str, **kwargs):
-    return creatio_request("POST", url, **kwargs)
+def creatio_post(url: str, log=False, **kwargs):
+    return creatio_request("POST", url, log=log, **kwargs)
 
 
 def clear_tokens(user_id):
@@ -183,15 +194,6 @@ def get_auth_endpoints():
         f"{base}/0/connect/revocation",
     )
 
-def get_userinfo_endpoint():
-    if config.get('UseDiscoveryEndpoint', False):
-        data = get_openid_configuration() or {}
-        endpoint = data.get('userinfo_endpoint')
-        if endpoint:
-            return endpoint
-    return f"{config['CreatioBaseUrl']}/0/connect/userinfo"
-
-
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
     access_token = g.user['creatio_access_token']
@@ -201,20 +203,10 @@ def fetch_user_and_activities():
     headers = {'Authorization': f'Bearer {access_token}'}
     user = None
     activities = []
-    userinfo_endpoint = get_userinfo_endpoint()
-    if userinfo_endpoint:
-        try:
-            resp = creatio_get(userinfo_endpoint, headers=headers)
-            if resp.status_code == 401:
-                return 'refresh', []
-            resp.raise_for_status()
-            user = resp.json()
-        except requests.RequestException:
-            user = None
+
     try:
         aresp = creatio_get(
             f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
-
             headers=headers
         )
         if aresp.status_code == 401:
@@ -298,7 +290,8 @@ def creatio_callback():
         'scope': config['Scope']
     }
     try:
-        resp = creatio_post(token_url, data=data, timeout=5)
+        resp = creatio_post(token_url, data=data, timeout=5, log=True)
+
         resp.raise_for_status()
         token_data = resp.json()
     except requests.RequestException:
@@ -378,7 +371,7 @@ def refresh():
         'scope': config['Scope']
     }
     try:
-        resp = creatio_post(token_url, data=data, timeout=5)
+        resp = creatio_post(token_url, data=data, timeout=5, log=True)
         if resp.status_code == 200:
             token_data = resp.json()
             conn = get_db_connection()
