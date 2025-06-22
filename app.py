@@ -55,6 +55,27 @@ if not file_logger.handlers:
 file_logger.setLevel(logging.INFO)
 
 
+# Configure logging: console for all requests, file for token operations
+logging.basicConfig(level=logging.INFO)
+console_logger = logging.getLogger('creatio_console')
+if not console_logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setFormatter(logging.Formatter('%(message)s'))
+    console_logger.addHandler(ch)
+
+file_logger = logging.getLogger('creatio_file')
+if not file_logger.handlers:
+    fh = logging.FileHandler('creatio_token_requests.log')
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    file_logger.addHandler(fh)
+file_logger.setLevel(logging.INFO)
+
+LOGIN_PAGE_PREFIX = (
+    "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" "
+    "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+)
+
+
 DATABASE = 'users.db'
 
 
@@ -90,16 +111,17 @@ def init_db():
 init_db()
 
 
-def creatio_request(method: str, url: str, log=False, **kwargs):
+def creatio_request(method: str, url: str, log=False, log_response=True, **kwargs):
     """Make an HTTP request to Creatio.
 
-    Always log the request and response to the console. If ``log`` is True,
-    also write the same details to the token log file.
+    ``log`` controls file logging for token operations. ``log_response``
+    determines whether the response body is printed to the console.
     """
     console_logger.info("Request URL: %s", url)
     try:
         response = requests.request(method, url, **kwargs)
-        console_logger.info("Response body: %s", response.text)
+        if log_response:
+            console_logger.info("Response body: %s", response.text)
         if log:
             file_logger.info("Request URL: %s", url)
             file_logger.info("Response body: %s", response.text)
@@ -111,12 +133,14 @@ def creatio_request(method: str, url: str, log=False, **kwargs):
         raise
 
 
-def creatio_get(url: str, log=False, **kwargs):
-    return creatio_request("GET", url, log=log, **kwargs)
+
+def creatio_get(url: str, log=False, log_response=True, **kwargs):
+    return creatio_request("GET", url, log=log, log_response=log_response, **kwargs)
 
 
-def creatio_post(url: str, log=False, **kwargs):
-    return creatio_request("POST", url, log=log, **kwargs)
+def creatio_post(url: str, log=False, log_response=True, **kwargs):
+    return creatio_request("POST", url, log=log, log_response=log_response, **kwargs)
+
 
 
 def clear_tokens(user_id):
@@ -228,9 +252,11 @@ def fetch_user_and_activities():
     try:
         aresp = creatio_get(
             f"{config['CreatioBaseUrl']}/0/odata/Activity",
-            headers=headers
+            headers=headers,
+            log_response=False
+
         )
-        if aresp.status_code == 401:
+        if aresp.status_code == 401 or aresp.text.startswith(LOGIN_PAGE_PREFIX):
             return 'refresh', []
         aresp.raise_for_status()
         activities = aresp.json().get('value', [])
