@@ -28,6 +28,8 @@ with open('appsettings.json') as f:
 
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure logging to write Creatio request info to a file with timestamps
 logging.basicConfig(
@@ -201,6 +203,7 @@ def fetch_user_and_activities():
     headers = {'Authorization': f'Bearer {access_token}'}
     user = None
     activities = []
+
     try:
         aresp = creatio_get(
             f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
@@ -288,6 +291,7 @@ def creatio_callback():
     }
     try:
         resp = creatio_post(token_url, data=data, timeout=5, log=True)
+
         resp.raise_for_status()
         token_data = resp.json()
     except requests.RequestException:
