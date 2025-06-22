@@ -171,7 +171,7 @@ function showConnect() {
   const btn = document.createElement('a');
   btn.className = 'btn';
   btn.href = window.LOGIN_URL || '/creatio/login';
-  btn.textContent = 'Connect Creatio account';
+  btn.innerHTML = '<img src="/static/img/creatio-logo.svg" class="logo-icon" alt="Creatio"> Connect Creatio account';
   btnContainer.appendChild(btn);
   const desc = document.createElement('p');
   desc.textContent = 'Connect your Creatio account to access integrated features and data.';
@@ -231,8 +231,8 @@ function showDashboard(data) {
       datasets: [{
         label: 'Activities by Month',
         data: values,
-        backgroundColor: 'rgba(75,192,192,0.4)',
-        borderColor: 'rgba(75,192,192,1)',
+        backgroundColor: 'rgba(255,165,0,0.4)',
+        borderColor: 'rgba(255,165,0,1)',
         borderWidth: 1
       }]
     },
