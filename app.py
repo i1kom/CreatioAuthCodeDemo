@@ -201,7 +201,8 @@ def login_required(func):
         conn.close()
         if user is None:
             return redirect(url_for('login'))
-        g.user = user
+        # Convert to a regular dict so token values can be updated later
+        g.user = dict(user)
         return func(*args, **kwargs)
 
     return wrapper
@@ -240,6 +241,43 @@ def get_auth_endpoints():
         f"{base}/0/connect/revocation",
     )
 
+def refresh_tokens_for_user(user):
+    """Attempt to refresh Creatio tokens for the given user."""
+    refresh_token = user['creatio_refresh_token']
+    if not refresh_token:
+        return None
+    _, token_url, _ = get_auth_endpoints()
+    data = {
+        'client_id': config['ClientId'],
+        'client_secret': config['ClientSecret'],
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token,
+        'scope': config['Scope']
+    }
+    try:
+        resp = creatio_post(token_url, data=data, timeout=5, log=True)
+        resp.raise_for_status()
+        token_data = resp.json()
+    except requests.RequestException:
+        return None
+
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE users SET creatio_access_token=?, creatio_refresh_token=? WHERE id=?',
+        (
+            token_data.get('access_token'),
+            token_data.get('refresh_token', refresh_token),
+            user['id'],
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    user['creatio_access_token'] = token_data.get('access_token')
+    user['creatio_refresh_token'] = token_data.get('refresh_token', refresh_token)
+    return token_data.get('access_token')
+
+
 def fetch_user_and_activities():
     """Retrieve user info and recent activities using current access token."""
     access_token = g.user['creatio_access_token']
@@ -257,6 +295,19 @@ def fetch_user_and_activities():
 
         )
         if aresp.status_code == 401 or aresp.text.startswith(LOGIN_PAGE_PREFIX):
+            new_token = refresh_tokens_for_user(g.user)
+            if new_token:
+                headers['Authorization'] = f'Bearer {new_token}'
+                aresp = creatio_get(
+                    f"{config['CreatioBaseUrl']}/0/odata/Activity",
+                    headers=headers,
+                    log_response=False
+                )
+            else:
+                clear_tokens(g.user['id'])
+                return 'refresh', []
+        if aresp.status_code == 401 or aresp.text.startswith(LOGIN_PAGE_PREFIX):
+            clear_tokens(g.user['id'])
             return 'refresh', []
         aresp.raise_for_status()
         activities = aresp.json().get('value', [])
