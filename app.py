@@ -364,7 +364,7 @@ def dashboard():
     if not g.user['creatio_access_token']:
         return redirect(url_for('index'))
     result = fetch_user_and_activities()
-    if result == 'refresh':
+    if result[0] == 'refresh':
         return redirect(url_for('refresh'))
     user, activities = result
     if user is None:
@@ -380,7 +380,7 @@ def api_activities():
     if not g.user['creatio_access_token']:
         return jsonify({'authenticated': False}), 401
     result = fetch_user_and_activities()
-    if result == 'refresh':
+    if result[0] == 'refresh':
         return jsonify({'authenticated': False}), 401
     user, activities = result
     counts = {}
