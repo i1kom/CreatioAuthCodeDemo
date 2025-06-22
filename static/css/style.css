@@ -51,15 +51,30 @@ body {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   width: 100%;
+  grid-auto-rows: minmax(0, 400px);
 }
 
 .chart-container {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chart-container canvas {
   width: 100% !important;
   height: auto !important;
+}
+
+.pie-container {
+  align-items: center;
+}
+
+.pie-canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
 }
 
 .center-content {
@@ -152,5 +167,12 @@ body {
 
 .preloader.hidden {
   display: none;
+}
+
+.logo-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  vertical-align: middle;
 }
 
