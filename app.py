@@ -314,7 +314,7 @@ def dashboard():
 @app.route('/api/activities')
 @login_required
 def api_activities():
-    """Return user info, activities and daily counts as JSON."""
+    """Return user info, activities and monthly counts as JSON."""
     if not g.user['creatio_access_token']:
         return jsonify({'authenticated': False}), 401
     result = fetch_user_and_activities()
@@ -326,8 +326,8 @@ def api_activities():
         date_str = act.get('StartDate') or act.get('CreatedOn')
         if not date_str:
             continue
-        day = date_str[:10]
-        counts[day] = counts.get(day, 0) + 1
+        month = date_str[:7]
+        counts[month] = counts.get(month, 0) + 1
     return jsonify({
         'authenticated': True,
         'user': user,
