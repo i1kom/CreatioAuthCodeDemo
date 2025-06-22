@@ -12,22 +12,47 @@ function stringToColor(str) {
 function renderTopPanel(username, userId) {
   const panel = document.getElementById('top-panel');
   if (!panel) return;
-  panel.innerHTML = '';
-  const avatar = document.createElement('div');
-  avatar.className = 'user-avatar';
+  let avatar = panel.querySelector('.user-avatar');
+  if (!avatar) {
+    avatar = document.createElement('div');
+    avatar.className = 'user-avatar';
+    panel.appendChild(avatar);
+  }
   avatar.textContent = username ? username.charAt(0).toUpperCase() : '';
   avatar.style.backgroundColor = stringToColor(String(userId));
-  const menu = document.createElement('div');
-  menu.className = 'user-menu';
-  const logout = document.createElement('a');
-  logout.href = '/logout';
-  logout.textContent = 'Logout';
-  menu.appendChild(logout);
-  avatar.addEventListener('click', () => {
-    menu.classList.toggle('show');
+
+  let menu = panel.querySelector('.user-menu');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.className = 'user-menu';
+    panel.appendChild(menu);
+  }
+  menu.innerHTML = '';
+  const profileBtn = document.createElement('button');
+  profileBtn.className = 'menu-btn';
+  profileBtn.textContent = 'My profile';
+  menu.appendChild(profileBtn);
+  const logoutBtn = document.createElement('button');
+  logoutBtn.className = 'menu-btn';
+  logoutBtn.textContent = 'Logout';
+  logoutBtn.addEventListener('click', () => {
+    window.location.href = '/logout';
   });
-  panel.appendChild(avatar);
-  panel.appendChild(menu);
+  menu.appendChild(logoutBtn);
+
+  avatar.onclick = e => {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  };
+
+  if (!panel.dataset.listener) {
+    document.addEventListener('click', ev => {
+      if (!menu.contains(ev.target) && ev.target !== avatar) {
+        menu.classList.remove('show');
+      }
+    });
+    panel.dataset.listener = 'true';
+  }
 }
 
 function showPreloader() {
@@ -148,11 +173,14 @@ function showConnect() {
   btn.href = window.LOGIN_URL || '/creatio/login';
   btn.textContent = 'Connect Creatio account';
   btnContainer.appendChild(btn);
+  const desc = document.createElement('p');
+  desc.textContent = 'Connect your Creatio account to access integrated features and data.';
+  btnContainer.appendChild(desc);
   grid.appendChild(btnContainer);
   grid.appendChild(createVacationChart());
   grid.appendChild(createPdpChart());
   content.appendChild(grid);
-  const local = data.localUser || window.LOCAL_USER;
+  const local = window.LOCAL_USER;
   if (local) {
     renderTopPanel(local.username, local.id);
   }
@@ -244,4 +272,9 @@ function loadData() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.LOCAL_USER) {
+    renderTopPanel(window.LOCAL_USER.username, window.LOCAL_USER.id);
+  }
+  loadData();
+});
