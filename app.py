@@ -310,7 +310,8 @@ def fetch_user_and_activities():
             return 'refresh', []
         aresp.raise_for_status()
         activities = aresp.json().get('value', [])
-    except requests.RequestException:
+    except requests.RequestException as e:
+        print(e)
         activities = []
     return user, activities
 
