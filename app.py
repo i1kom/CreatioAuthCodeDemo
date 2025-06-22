@@ -201,7 +201,8 @@ def login_required(func):
         conn.close()
         if user is None:
             return redirect(url_for('login'))
-        g.user = user
+        # Convert to a regular dict so token values can be updated later
+        g.user = dict(user)
         return func(*args, **kwargs)
 
     return wrapper
