@@ -11,6 +11,7 @@ import time
 import sqlite3
 
 import requests
+import logging
 
 from flask import Flask, redirect, url_for, request, render_template, jsonify, g, session
 
@@ -27,6 +28,8 @@ with open('appsettings.json') as f:
 
 app = Flask(__name__)
 app.secret_key = 'replace_with_secure_key'
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 DATABASE = 'users.db'
 
@@ -61,6 +64,26 @@ def init_db():
 
 
 init_db()
+
+
+def creatio_request(method: str, url: str, **kwargs):
+    """Make an HTTP request to Creatio and log the URL and response body."""
+    logger.info("Request URL: %s", url)
+    try:
+        response = requests.request(method, url, **kwargs)
+        logger.info("Response body: %s", response.text)
+        return response
+    except requests.RequestException as exc:
+        logger.info("Request to %s failed: %s", url, exc)
+        raise
+
+
+def creatio_get(url: str, **kwargs):
+    return creatio_request("GET", url, **kwargs)
+
+
+def creatio_post(url: str, **kwargs):
+    return creatio_request("POST", url, **kwargs)
 
 
 def clear_tokens(user_id):
@@ -133,7 +156,7 @@ def get_openid_configuration():
     global openid_config_cache
     if openid_config_cache is None:
         try:
-            resp = requests.get(
+            resp = creatio_get(
                 f"{config['CreatioBaseUrl']}/.well-known/openid-configuration",
                 timeout=5,
             )
@@ -181,7 +204,7 @@ def fetch_user_and_activities():
     userinfo_endpoint = get_userinfo_endpoint()
     if userinfo_endpoint:
         try:
-            resp = requests.get(userinfo_endpoint, headers=headers)
+            resp = creatio_get(userinfo_endpoint, headers=headers)
             if resp.status_code == 401:
                 return 'refresh', []
             resp.raise_for_status()
@@ -189,7 +212,7 @@ def fetch_user_and_activities():
         except requests.RequestException:
             user = None
     try:
-        aresp = requests.get(
+        aresp = creatio_get(
             f"{config['CreatioBaseUrl']}/0/odata/Activity?$top=50",
 
             headers=headers
@@ -275,7 +298,7 @@ def creatio_callback():
         'scope': config['Scope']
     }
     try:
-        resp = requests.post(token_url, data=data, timeout=5)
+        resp = creatio_post(token_url, data=data, timeout=5)
         resp.raise_for_status()
         token_data = resp.json()
     except requests.RequestException:
@@ -355,7 +378,7 @@ def refresh():
         'scope': config['Scope']
     }
     try:
-        resp = requests.post(token_url, data=data, timeout=5)
+        resp = creatio_post(token_url, data=data, timeout=5)
         if resp.status_code == 200:
             token_data = resp.json()
             conn = get_db_connection()
@@ -392,7 +415,7 @@ def revoke():
         'client_secret': config['ClientSecret']
     }
     try:
-        requests.post(revocation_url, data=data)
+        creatio_post(revocation_url, data=data)
     except requests.RequestException:
         pass
 
