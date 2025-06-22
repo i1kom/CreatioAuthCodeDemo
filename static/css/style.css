@@ -63,7 +63,7 @@ body {
 
 .chart-container canvas {
   width: 100% !important;
-  flex: 1 1 auto;
+  height: auto !important;
 }
 
 .center-content {
