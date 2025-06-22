@@ -1,5 +1,19 @@
 Chart.register(ChartDataLabels);
 
+// plugin to add extra margin between legend and chart area
+const legendMargin = {
+  id: 'legendMargin',
+  beforeInit(chart, args, options) {
+    const fit = chart.legend.fit;
+    chart.legend.fit = function fitWithMargin() {
+      fit.bind(chart.legend)();
+      this.height += (options && options.margin) || 0;
+    };
+  }
+};
+Chart.register(legendMargin);
+Chart.defaults.plugins.legendMargin = { margin: 24 };
+
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
