@@ -98,6 +98,7 @@ function createBonusChart() {
           color: '#000'
         }
       },
+      layout: { padding: { bottom: 24 } },
       responsive: true
     }
   });
@@ -130,7 +131,8 @@ function createVacationChart() {
     options: {
       responsive: true,
       aspectRatio: 1,
-      plugins: { datalabels: { color: '#000' } }
+      plugins: { datalabels: { color: '#000' } },
+      layout: { padding: { bottom: 24 } }
     }
   });
 
@@ -162,7 +164,8 @@ function createPdpChart() {
     options: {
       responsive: true,
       aspectRatio: 1,
-      plugins: { datalabels: { color: '#000' } }
+      plugins: { datalabels: { color: '#000' } },
+      layout: { padding: { bottom: 24 } }
     }
   });
   return container;
@@ -209,35 +212,25 @@ function showDashboard(data) {
   const activityContainer = document.createElement('div');
   activityContainer.className = 'chart-container';
   const actTitle = document.createElement('h3');
-  actTitle.textContent = 'Activities by Month';
+  actTitle.textContent = 'Calls by Date';
   activityContainer.appendChild(actTitle);
   const canvas = document.createElement('canvas');
-  canvas.id = 'activityChart';
+  canvas.id = 'callsChart';
   activityContainer.appendChild(canvas);
   grid.appendChild(activityContainer);
   grid.appendChild(createVacationChart());
   grid.appendChild(createPdpChart());
   content.appendChild(grid);
 
-  if (data.activities && data.activities.length) {
-    const list = document.createElement('ul');
-    data.activities.forEach(a => {
-      const li = document.createElement('li');
-      li.textContent = a.Title;
-      list.appendChild(li);
-    });
-    content.appendChild(list);
-  }
-
   const labels = Object.keys(data.counts).sort();
   const values = labels.map(l => data.counts[l]);
 
-  new Chart(document.getElementById('activityChart').getContext('2d'), {
+  new Chart(document.getElementById('callsChart').getContext('2d'), {
     type: 'bar',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Activities by Month',
+        label: 'Calls',
         data: values,
         backgroundColor: 'rgba(255,165,0,0.4)',
         borderColor: 'rgba(255,165,0,1)',
@@ -254,7 +247,8 @@ function showDashboard(data) {
           align: 'top',
           color: '#000'
         }
-      }
+      },
+      layout: { padding: { bottom: 24 } }
     }
   });
 

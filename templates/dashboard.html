@@ -21,14 +21,7 @@
         {% if user %}
             <p>Logged in as {{ user.get('name') or user.get('email') }}</p>
         {% endif %}
-        <h3>Recent Activities</h3>
-        <ul>
-            {% for act in activities %}
-                <li>{{ act.get('Title') }}</li>
-            {% else %}
-                <li>No activities found.</li>
-            {% endfor %}
-        </ul>
+        
     </div>
     <div id="preloader" class="preloader hidden">Loading...</div>
 </body>
