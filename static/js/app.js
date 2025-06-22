@@ -107,12 +107,13 @@ function createBonusChart() {
 
 function createVacationChart() {
   const container = document.createElement('div');
-  container.className = 'chart-container';
+  container.className = 'chart-container pie-container';
   const title = document.createElement('h3');
   title.textContent = 'Vacation Days Left';
   container.appendChild(title);
   const canvas = document.createElement('canvas');
   canvas.id = 'vacationChart';
+  canvas.className = 'pie-canvas';
   container.appendChild(canvas);
 
   new Chart(canvas.getContext('2d'), {
@@ -126,6 +127,7 @@ function createVacationChart() {
     },
     options: {
       responsive: true,
+      aspectRatio: 1,
       plugins: { datalabels: { color: '#000' } }
     }
   });
@@ -135,12 +137,13 @@ function createVacationChart() {
 
 function createPdpChart() {
   const container = document.createElement('div');
-  container.className = 'chart-container';
+  container.className = 'chart-container pie-container';
   const title = document.createElement('h3');
   title.textContent = 'PDP Tasks Closed';
   container.appendChild(title);
   const canvas = document.createElement('canvas');
   canvas.id = 'pdpChart';
+  canvas.className = 'pie-canvas';
   container.appendChild(canvas);
 
   new Chart(canvas.getContext('2d'), {
@@ -154,6 +157,7 @@ function createPdpChart() {
     },
     options: {
       responsive: true,
+      aspectRatio: 1,
       plugins: { datalabels: { color: '#000' } }
     }
   });

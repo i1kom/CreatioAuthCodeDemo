@@ -85,6 +85,17 @@ body {
   flex: 1 1 auto;
 }
 
+.pie-container {
+  align-items: center;
+}
+
+.pie-canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
+}
+
 .center-content {
   display: flex;
   justify-content: center;
