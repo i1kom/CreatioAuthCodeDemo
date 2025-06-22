@@ -179,7 +179,7 @@ function showConnect() {
   const btn = document.createElement('a');
   btn.className = 'btn';
   btn.href = window.LOGIN_URL || '/creatio/login';
-  btn.innerHTML = '<img src="/static/img/creatio-logo.svg" class="logo-icon" alt="Creatio"> Connect Creatio account';
+  btn.innerHTML = '<img src="/static/img/сreatio_logo.png" class="logo-icon" alt="Creatio"> Connect Creatio account';
   btnContainer.appendChild(btn);
   const desc = document.createElement('p');
   desc.textContent = 'Connect your Creatio account to access integrated features and data.';

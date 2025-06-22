@@ -57,7 +57,7 @@ body {
 .btn {
   display: inline-block;
   padding: 10px 15px;
-  background-color: #007BFF;
+  background-color: #ff4013;
   color: #fff;
   text-decoration: none;
   border-radius: 4px;
@@ -207,8 +207,8 @@ body {
 }
 
 .logo-icon {
-  width: 16px;
-  height: 16px;
+  width: 32px;
+  height: 14px;
   margin-right: 5px;
   vertical-align: middle;
 }
