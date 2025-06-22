@@ -111,10 +111,12 @@ function createVacationChart() {
   const title = document.createElement('h3');
   title.textContent = 'Vacation Days Left';
   container.appendChild(title);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pie-wrapper';
   const canvas = document.createElement('canvas');
   canvas.id = 'vacationChart';
-  canvas.className = 'pie-canvas';
-  container.appendChild(canvas);
+  wrapper.appendChild(canvas);
+  container.appendChild(wrapper);
 
   new Chart(canvas.getContext('2d'), {
     type: 'doughnut',
@@ -141,10 +143,12 @@ function createPdpChart() {
   const title = document.createElement('h3');
   title.textContent = 'PDP Tasks Closed';
   container.appendChild(title);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pie-wrapper';
   const canvas = document.createElement('canvas');
   canvas.id = 'pdpChart';
-  canvas.className = 'pie-canvas';
-  container.appendChild(canvas);
+  wrapper.appendChild(canvas);
+  container.appendChild(wrapper);
 
   new Chart(canvas.getContext('2d'), {
     type: 'pie',
