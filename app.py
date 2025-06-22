@@ -39,6 +39,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Configure logging: console for all requests, file for token operations
+logging.basicConfig(level=logging.INFO)
+console_logger = logging.getLogger('creatio_console')
+if not console_logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setFormatter(logging.Formatter('%(message)s'))
+    console_logger.addHandler(ch)
+
+file_logger = logging.getLogger('creatio_file')
+if not file_logger.handlers:
+    fh = logging.FileHandler('creatio_token_requests.log')
+    fh.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    file_logger.addHandler(fh)
+file_logger.setLevel(logging.INFO)
+
+
 DATABASE = 'users.db'
 
 
@@ -75,17 +91,23 @@ init_db()
 
 
 def creatio_request(method: str, url: str, log=False, **kwargs):
-    """Make an HTTP request to Creatio and optionally log the URL and response."""
-    if log:
-        logger.info("Request URL: %s", url)
+    """Make an HTTP request to Creatio.
+
+    Always log the request and response to the console. If ``log`` is True,
+    also write the same details to the token log file.
+    """
+    console_logger.info("Request URL: %s", url)
     try:
         response = requests.request(method, url, **kwargs)
+        console_logger.info("Response body: %s", response.text)
         if log:
-            logger.info("Response body: %s", response.text)
+            file_logger.info("Request URL: %s", url)
+            file_logger.info("Response body: %s", response.text)
         return response
     except requests.RequestException as exc:
+        console_logger.info("Request to %s failed: %s", url, exc)
         if log:
-            logger.info("Request to %s failed: %s", url, exc)
+            file_logger.info("Request to %s failed: %s", url, exc)
         raise
 
 
@@ -203,12 +225,9 @@ def fetch_user_and_activities():
     headers = {'Authorization': f'Bearer {access_token}'}
     user = None
     activities = []
-
     try:
         aresp = creatio_get(
             f"{config['CreatioBaseUrl']}/0/odata/Activity",
-
-
             headers=headers
         )
         if aresp.status_code == 401:
@@ -293,7 +312,6 @@ def creatio_callback():
     }
     try:
         resp = creatio_post(token_url, data=data, timeout=5, log=True)
-
         resp.raise_for_status()
         token_data = resp.json()
     except requests.RequestException:
